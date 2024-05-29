@@ -1,10 +1,20 @@
 from rest_framework import serializers
 from djoser.serializers import UserSerializer, UserCreateSerializer as BaseUserSerializer
-from .models import Todo
+from .models import *
 
-class TodoSerializer(serializers.ModelSerializer):
+class TodoListSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Todo
+        model = TodoList
+        fields = '__all__'
+
+class TaskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = '__all__'
+
+class UsersTodoListsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserTodoList
         fields = '__all__'
 
 class UserCreateSerializer(BaseUserSerializer):
