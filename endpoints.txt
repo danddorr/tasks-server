@@ -1,0 +1,37 @@
+Endpoint	            GET	                                            POST	                    PUT	                                            DELETE
+todos/api/	            1. List All: List all to-dos for requested user	2. Create: Add a new to-do	N/A	                                            N/A
+todos/api/<int:todo_id>	3. Retrieve: Get a to-do with a given todo_id	N/A	                        4. Update: Update a to-do with a given todo_id	5. Delete: Delete a to-do with a given todo_id
+
+
+###
+/todos/api/ && todos/api/<int:todo_id>
+
+header: Authorization=JWT [access_token]
+
+###
+POST
+/auth/jwt/create/
+
+request body: {
+    username: "username",
+    password: "password",
+}
+response: {
+    "refresh": "",
+    "access": ""
+}
+
+###
+POST
+/auth/users/
+
+request body: {
+    "email": "",
+    "username": "",
+    "password": ""
+}
+response: {
+    "email": "",
+    "username": "",
+    "id": 3
+}

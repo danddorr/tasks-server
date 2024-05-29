@@ -4,30 +4,44 @@ from rest_framework import status
 from rest_framework import permissions
 from .models import Todo
 from .serializers import TodoSerializer
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from .permissions import IsOwner
+from rest_framework.permissions import IsAuthenticated
 
 class TodoListApiView(APIView):
     # add permission to check if user is authenticated
-    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, IsOwner] 
 
     # 1. List all
     def get(self, request, *args, **kwargs):
-        '''
-        List all the todo items for given requested user
-        '''
-        todos = Todo.objects.filter(user = request.user.id)
+        # Retrieve all todo items for the authenticated user
+        todos = Todo.objects.filter(user=request.user)
         serializer = TodoSerializer(todos, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        print(request.user)
+        print(todos)
+
+        # Construct custom response data
+        custom_data = {
+            'count': todos.count(),  # Total count of todos
+            'results': serializer.data,  # Serialized todo items
+            'message': 'List of todo items retrieved successfully.'
+        }
+        # Return custom response
+        return Response(custom_data, status=status.HTTP_200_OK)
 
     # 2. Create
     def post(self, request, *args, **kwargs):
         '''
         Create the Todo with given todo data
         '''
+        print(request.data)
         data = {
             'task': request.data.get('task'), 
             'completed': request.data.get('completed'), 
             'user': request.user.id
         }
+        print(data)
         serializer = TodoSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
@@ -37,7 +51,8 @@ class TodoListApiView(APIView):
     
 class TodoDetailApiView(APIView):
     # add permission to check if user is authenticated
-    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def get_object(self, todo_id, user_id):
         '''
