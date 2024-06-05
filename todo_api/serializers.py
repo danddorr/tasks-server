@@ -2,9 +2,9 @@ from rest_framework import serializers
 from djoser.serializers import UserSerializer, UserCreateSerializer as BaseUserSerializer
 from .models import *
 
-class TodoListSerializer(serializers.ModelSerializer):
+class TaskListSerializer(serializers.ModelSerializer):
     class Meta:
-        model = TodoList
+        model = TaskList
         fields = '__all__'
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -12,9 +12,9 @@ class TaskSerializer(serializers.ModelSerializer):
         model = Task
         fields = '__all__'
 
-class UsersTodoListsSerializer(serializers.ModelSerializer):
+class UsersTaskListsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = UserTodoList
+        model = UserTaskList
         fields = '__all__'
 
 class UserCreateSerializer(BaseUserSerializer):

@@ -9,27 +9,27 @@ from .permissions import IsOwner
 from rest_framework.permissions import IsAuthenticated
 from datetime import datetime
 
-class TodoListApiView(APIView):
+class TaskListApiView(APIView):
     # add permission to check if user is authenticated
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsOwner] 
 
     # 1. List all
     def get(self, request, *args, **kwargs):
-        # Retrieve all todo items for the authenticated user
-        userTodos = UserTodoList.objects.filter(user_id=request.user.id)
-        userTodos_ids = userTodos.values_list('todolist', flat=True)
-        todos = TodoList.objects.filter(id__in=userTodos_ids)
-        serializer = TodoListSerializer(todos, many=True)
-        print(userTodos[0].user)
-        print(todos)
+        # Retrieve all tasklist items for the authenticated user
+        userTasklists = UserTaskList.objects.filter(user_id=request.user.id)
+        userTasklists_ids = userTasklists.values_list('tasklist', flat=True)
+        tasklists = TaskList.objects.filter(id__in=userTasklists_ids)
+        serializer = TaskListSerializer(tasklists, many=True)
+        #print(userTasklists.first().user)
+        print(tasklists)
         print(serializer.data)
 
         # Construct custom response data
         custom_data = {
-            'count': todos.count(),  # Total count of todos
-            'results': serializer.data,  # Serialized todo items
-            'message': 'List of todo items retrieved successfully.'
+            'count': tasklists.count(),  # Total count of tasklists
+            'results': serializer.data,  # Serialized tasklist items
+            'message': 'List of tasklist items retrieved successfully.'
         }
         # Return custom response
         return Response(custom_data, status=status.HTTP_200_OK)
@@ -37,24 +37,24 @@ class TodoListApiView(APIView):
     # 2. Create
     def post(self, request, *args, **kwargs):
         '''
-        Create the Todo with given todo data
+        Create the Tasklist with given tasklist data
         '''
 
         data = {
             'name': request.data.get('name'),
         }
 
-        serializer = TodoListSerializer(data=data)
+        serializer = TaskListSerializer(data=data)
         if serializer.is_valid():
-            todo_list = serializer.save()
+            tasklist = serializer.save()
 
             user_data = {
                 'user': request.user.id,
-                'todolist': todo_list.id,  # Pass the ID of the newly created TodoList
-                'role': UserTodoList.creator,
+                'tasklist': tasklist.id,  # Pass the ID of the newly created TaskList
+                'role': UserTaskList.creator,
             }
 
-            user_serializer = UsersTodoListsSerializer(data=user_data)
+            user_serializer = UsersTaskListsSerializer(data=user_data)
             if user_serializer.is_valid():
                 user_serializer.save()
             else:
@@ -64,61 +64,61 @@ class TodoListApiView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class TodoDetailApiView(APIView):
+class TaskListDetailApiView(APIView):
     # add permission to check if user is authenticated
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsOwner]
 
-    def get_object(self, todolist_id, user_id):
+    def get_object(self, tasklist_id, user_id):
         '''
-        Helper method to get the object with given todo_id, and user_id
+        Helper method to get the object with given tasklist_id, and user_id
         '''
         try:
-            user_todo_list = UserTodoList.objects.get(todolist_id=todolist_id, user_id=user_id)
-            return user_todo_list.todolist
-        except UserTodoList.DoesNotExist:
+            userTasklist = UserTaskList.objects.get(tasklist_id=tasklist_id, user_id=user_id)
+            return userTasklist.tasklist
+        except UserTaskList.DoesNotExist:
             return None
 
     # 3. Retrieve
-    def get(self, request, todo_id, *args, **kwargs):
+    def get(self, request, tasklist_id, *args, **kwargs):
         '''
-        Retrieves the Todo with given todo_id
+        Retrieves the Tasklist with given tasklist_id
         '''
-        todo_instance = self.get_object(todo_id, request.user.id)
-        if not todo_instance:
+        tasklist_instance = self.get_object(tasklist_id, request.user.id)
+        if not tasklist_instance:
             return Response(
-                {"res": "Object with todo id does not exists"},
+                {"res": "Object with tasklist id does not exists"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Retrieve all tasks that belong to the TodoList
-        tasks = Task.objects.filter(todolist=todo_instance)
+        # Retrieve all tasks that belong to the TaskList
+        tasks = Task.objects.filter(tasklist=tasklist_instance)
 
         # Serialize the tasks
         task_serializer = TaskSerializer(tasks, many=True)
 
-        # Serialize the TodoList
-        todo_serializer = TodoListSerializer(todo_instance)
+        # Serialize the TaskList
+        tasklist_serializer = TaskListSerializer(tasklist_instance)
 
-        # Return the serialized TodoList and tasks
+        # Return the serialized TaskList and tasks
         return Response({
-            'todolist': todo_serializer.data,
+            'tasklist': tasklist_serializer.data,
             'tasks': task_serializer.data
         }, status=status.HTTP_200_OK)
     
-    def post(self, request, todo_id, *args, **kwargs):
+    def post(self, request, tasklist_id, *args, **kwargs):
         '''
         Create the Task with given task data
         '''
-        todo_instance = self.get_object(todo_id, request.user.id)
-        if not todo_instance:
+        tasklist_instance = self.get_object(tasklist_id, request.user.id)
+        if not tasklist_instance:
             return Response(
-                {"res": "Object with todo id does not exists"}, 
+                {"res": "Object with tasklist id does not exists"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         data = {
-            'todolist': todo_instance.id,
+            'tasklist': tasklist_instance.id,
             'task': request.data.get('task'),
         }
 
@@ -130,14 +130,14 @@ class TodoDetailApiView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # 4. Update
-    def put(self, request, todo_id, *args, **kwargs):
+    def put(self, request, tasklist_id, *args, **kwargs):
         '''
-        Updates the todo item with given todo_id if exists
+        Updates the tasklist item with given tasklist_id if exists
         '''
-        todo_instance = self.get_object(todo_id, request.user.id)
-        if not todo_instance:
+        tasklist_instance = self.get_object(tasklist_id, request.user.id)
+        if not tasklist_instance:
             return Response(
-                {"res": "Object with todo id does not exists"}, 
+                {"res": "Object with tasklist id does not exists"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -147,24 +147,24 @@ class TodoDetailApiView(APIView):
             'name': request.data.get('name'), 
             'completed': completed, 
         }
-        serializer = TodoListSerializer(instance = todo_instance, data=data, partial = True)
+        serializer = TaskListSerializer(instance = tasklist_instance, data=data, partial = True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # 5. Delete
-    def delete(self, request, todo_id, *args, **kwargs):
+    def delete(self, request, tasklist_id, *args, **kwargs):
         '''
-        Deletes the todo item with given todo_id if exists
+        Deletes the tasklist item with given tasklist_id if exists
         '''
-        todo_instance = self.get_object(todo_id, request.user.id)
-        if not todo_instance:
+        tasklist_instance = self.get_object(tasklist_id, request.user.id)
+        if not tasklist_instance:
             return Response(
-                {"res": "Object with todo id does not exists"}, 
+                {"res": "Object with tasklist id does not exists"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
-        todo_instance.delete()
+        tasklist_instance.delete()
         return Response(
             {"res": "Object deleted!"},
             status=status.HTTP_200_OK
@@ -180,11 +180,11 @@ class TaskApiView(APIView):
         Helper method to get the task object with given task_id, and user_id
         '''
         try:
-            # Get all TodoList objects that the user owns
-            user_todo_lists = UserTodoList.objects.filter(user_id=user_id).values_list('todolist', flat=True)
+            # Get all TaskList objects that the user owns
+            user_tasklists = UserTaskList.objects.filter(user_id=user_id).values_list('tasklist', flat=True)
 
-            # Get the Task object with the given task_id that belongs to one of the TodoList objects
-            task = Task.objects.get(id=task_id, todolist__in=user_todo_lists)
+            # Get the Task object with the given task_id that belongs to one of the TaskList objects
+            task = Task.objects.get(id=task_id, tasklist__in=user_tasklists)
             return task
         except Task.DoesNotExist:
             return None

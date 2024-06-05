@@ -1,12 +1,12 @@
 from django.urls import path
 from .views import (
-    TodoListApiView,
-    TodoDetailApiView,
+    TaskListApiView,
+    TaskListDetailApiView,
     TaskApiView,
 )
 
 urlpatterns = [
-    path('api/', TodoListApiView.as_view()),
-    path('api/<int:todo_id>/', TodoDetailApiView.as_view()),
-    path('api/task/<int:task_id>/', TaskApiView.as_view()),
+    path('tasklists/', TaskListApiView.as_view()),
+    path('tasklists/<int:tasklist_id>/', TaskListDetailApiView.as_view()),
+    path('tasks/<int:task_id>/', TaskApiView.as_view()),
 ]
