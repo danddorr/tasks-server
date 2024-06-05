@@ -40,7 +40,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'todo_api',
-    'djoser'
+    'djoser',
+    'drf_spectacular',
+    'drf_spectacular_sidecar',
 ]
 
 MIDDLEWARE = [
@@ -137,4 +139,15 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('JWT',),
     "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=2),
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Tasks API',
+    'DESCRIPTION': 'Your project description',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SWAGGER_UI_DIST': 'SIDECAR',  # shorthand to use the sidecar instead
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
+    # OTHER SETTINGS
 }
