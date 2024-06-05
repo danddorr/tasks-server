@@ -21,9 +21,19 @@ class Task(models.Model):
         return self.task
 
 class UserTodoList(models.Model):
+    creator = "Creator"
+    viewer = "Viewer"
+    editor = "Editor"
+
+    role_choices = [
+        (creator, "Creator"),
+        (viewer, "Viewer"),
+        (editor, "Editor")
+    ]
+
     user = models.ForeignKey(User, on_delete = models.CASCADE, blank = True, null = True)
     todolist = models.ForeignKey(TodoList, on_delete = models.CASCADE, blank = True, null = True)
-    role = models.CharField(max_length = 300)
+    role = models.CharField(max_length = 10, choices = role_choices, default = creator)
 
 
     def __str__(self):

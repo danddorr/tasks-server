@@ -17,10 +17,14 @@ class TodoListApiView(APIView):
     # 1. List all
     def get(self, request, *args, **kwargs):
         # Retrieve all todo items for the authenticated user
-        todos = UserTodoList.objects.filter(user_id=request.user.id).values_list('todolist', flat=True)
-        todos = TodoList.objects.filter(id__in=todos)
+        userTodos = UserTodoList.objects.filter(user_id=request.user.id)
+        userTodos_ids = userTodos.values_list('todolist', flat=True)
+        todos = TodoList.objects.filter(id__in=userTodos_ids)
         serializer = TodoListSerializer(todos, many=True)
+        print(userTodos[0].user)
+        print(todos)
         print(serializer.data)
+
         # Construct custom response data
         custom_data = {
             'count': todos.count(),  # Total count of todos
@@ -47,7 +51,7 @@ class TodoListApiView(APIView):
             user_data = {
                 'user': request.user.id,
                 'todolist': todo_list.id,  # Pass the ID of the newly created TodoList
-                'role': 'owner'
+                'role': UserTodoList.creator,
             }
 
             user_serializer = UsersTodoListsSerializer(data=user_data)
