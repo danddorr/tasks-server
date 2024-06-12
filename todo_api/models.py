@@ -8,7 +8,7 @@ class TaskList(models.Model):
     last_updated_at = models.DateTimeField(auto_now = True, blank = True)
 
     def __str__(self):
-        return self.name
+        return f"{self.name} {self.id}"
     
 class Task(models.Model):
     tasklist = models.ForeignKey(TaskList, on_delete = models.CASCADE, blank = True, null = True)
@@ -39,25 +39,14 @@ class UserTaskList(models.Model):
     def __str__(self):
         return self.user.username + " " + self.tasklist.name
 
-"""
-class TaskList(models.Model):
-    name = models.CharField(max_length = 50)
-    timestamp = models.DateTimeField(auto_now_add = True, auto_now = False, blank = True)
-    completed = models.BooleanField(default = False, blank = True)
-    updated = models.DateTimeField(auto_now = True, blank = True)
-    user = models.ForeignKey(User, on_delete = models.CASCADE, blank = True, null = True)
+class ItemPosition(models.Model):
+    user = models.ForeignKey(User, on_delete = models.CASCADE)
+    tasklist = models.ForeignKey(TaskList, on_delete = models.CASCADE, blank = True, null = True)
+    task = models.ForeignKey(Task, on_delete = models.CASCADE, blank = True, null = True)
+    position = models.IntegerField()
 
     def __str__(self):
-        return self.task
-    
-class Task(models.Model):
-    tasklist_id = models.ForeignKey(TaskList, on_delete = models.CASCADE, blank = True, null = True)
-    timestamp = models.DateTimeField(auto_now_add = True, auto_now = False, blank = True)
-    completed = models.BooleanField(default = False, blank = True)
-    updated = models.DateTimeField(auto_now = True, blank = True)
-    task = models.CharField(max_length = 300)
-
-    def __str__(self):
-        return self.task
-    
-"""  
+        if self.tasklist:
+            return self.tasklist.name + " " + str(self.position)
+        elif self.task:
+            return self.task.task + " " + str(self.position)
