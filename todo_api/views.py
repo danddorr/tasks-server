@@ -8,6 +8,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from .permissions import IsOwner
 from rest_framework.permissions import IsAuthenticated
 from datetime import datetime
+from django.utils import timezone
 
 class TaskListApiView(APIView):
     # add permission to check if user is authenticated
@@ -155,14 +156,17 @@ class TaskListDetailApiView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        completed = datetime.now() if request.data.get('completed') else None
+        completed = timezone.now() if request.data.get('completed') else None
+        print(request.data.get('completed'))
+        print(completed)
 
         data = {
             'name': request.data.get('name'), 
-            'completed': completed, 
+            'completed_at': completed, 
         }
         serializer = TaskListSerializer(instance = tasklist_instance, data=data, partial = True)
         if serializer.is_valid():
+            print(serializer.validated_data)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -233,11 +237,11 @@ class TaskApiView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        completed = datetime.now() if request.data.get('completed') else None
+        completed = timezone.now() if request.data.get('completed') else None
 
         data = {
             'task': request.data.get('task'), 
-            'completed': completed, 
+            'completed_at': completed, 
         }
         serializer = TaskSerializer(instance = task_instance, data=data, partial = True)
         if serializer.is_valid():
@@ -328,7 +332,7 @@ class ItemPositionsChange(APIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         for serializer in obj_serializers:
-            serializer.save() 
+            serializer.save() # toto nesavuje 
 
         return Response("success", status=status.HTTP_200_OK)
     
