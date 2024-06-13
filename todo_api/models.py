@@ -34,19 +34,7 @@ class UserTaskList(models.Model):
     user = models.ForeignKey(User, on_delete = models.CASCADE, blank = True, null = True)
     tasklist = models.ForeignKey(TaskList, on_delete = models.CASCADE, blank = True, null = True)
     role = models.CharField(max_length = 10, choices = role_choices, default = creator)
-
-
-    def __str__(self):
-        return self.user.username + " " + self.tasklist.name
-
-class ItemPosition(models.Model):
-    user = models.ForeignKey(User, on_delete = models.CASCADE)
-    tasklist = models.ForeignKey(TaskList, on_delete = models.CASCADE, blank = True, null = True)
-    task = models.ForeignKey(Task, on_delete = models.CASCADE, blank = True, null = True)
     position = models.IntegerField()
 
     def __str__(self):
-        if self.tasklist:
-            return self.tasklist.name + " " + str(self.position)
-        elif self.task:
-            return self.task.task + " " + str(self.position)
+        return self.user.username + " " + self.tasklist.name

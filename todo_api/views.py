@@ -1,13 +1,11 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework import permissions
 from .models import *
 from .serializers import *
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .permissions import IsOwner
 from rest_framework.permissions import IsAuthenticated
-from datetime import datetime
 from django.utils import timezone
 
 class TaskListApiView(APIView):
@@ -22,13 +20,9 @@ class TaskListApiView(APIView):
         userTasklists_ids = userTasklists.values_list('tasklist', flat=True)
         tasklists = TaskList.objects.filter(id__in=userTasklists_ids)
         serializer = TaskListSerializer(tasklists, many=True)
-
-        print(ItemPosition.objects.filter(user_id=request.user.id))
         
         print(tasklists)
         print(serializer.data)
-        for tasklist in tasklists:
-            print(tasklist.itemposition_set.all())
 
         # Construct custom response data
         custom_data = {
@@ -53,29 +47,23 @@ class TaskListApiView(APIView):
         if serializer.is_valid():
             tasklist = serializer.save()
 
+            length = UserTaskList.objects.filter(user_id=request.user.id).count()
+
             user_data = {
                 'user': request.user.id,
                 'tasklist': tasklist.id,
                 'role': UserTaskList.creator,
-            }
-
-            length = UserTaskList.objects.filter(user_id=request.user.id).count()
-            itemPosition = {
-                'user': request.user.id,
-                'tasklist': tasklist.id,
                 'position': length,
             }
 
-            itemPositionSerializer = ItemPositionSerializer(data=itemPosition)
             user_serializer = UsersTaskListsSerializer(data=user_data)
 
-            if user_serializer.is_valid() and itemPositionSerializer.is_valid():
+            if user_serializer.is_valid():
                 user_serializer.save()
-                itemPositionSerializer.save()
             else:
-                return Response([user_serializer.errors, itemPositionSerializer.errors], status=status.HTTP_400_BAD_REQUEST)
+                return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            return Response([serializer.data, itemPositionSerializer.data], status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -157,18 +145,18 @@ class TaskListDetailApiView(APIView):
             )
         
         completed = timezone.now() if request.data.get('completed') else None
-        print(request.data.get('completed'))
-        print(completed)
 
         data = {
             'name': request.data.get('name'), 
             'completed_at': completed, 
         }
+
         serializer = TaskListSerializer(instance = tasklist_instance, data=data, partial = True)
+        
         if serializer.is_valid():
-            print(serializer.validated_data)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
+        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # 5. Delete
@@ -266,73 +254,61 @@ class TaskApiView(APIView):
             status=status.HTTP_200_OK
         )
     
-class ItemPositionsChange(APIView):
+class TaskListPositionsChange(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsOwner]
         
-    def get_tasklist(self, tasklist_id, user_id):
+    def get_UserTaskList(self, tasklist_id, user_id):
         try:
             userTasklist = UserTaskList.objects.get(tasklist_id=tasklist_id, user_id=user_id)
-            
-            return userTasklist.tasklist
+            return userTasklist
         except UserTaskList.DoesNotExist:
             return None
-    
-    def get_task(self, task_id, user_id):
-        try:
-            user_tasklists = UserTaskList.objects.filter(user_id=user_id).values_list('tasklist', flat=True)
-
-            task = Task.objects.get(id=task_id, tasklist__in=user_tasklists)
-            
-            return task
-        except Task.DoesNotExist:
-            return None
         
-    def get_object(self, type, obj_id, user_id):
-        if type == 'tasklists':
-            return self.get_tasklist(obj_id, user_id)
-        elif type == 'tasks':
-            return self.get_task(obj_id, user_id)
-        return None
-
-    def put(self, request, type: str, *args, **kwargs):
-
-        positions: dict[str, int] = request.data
-
-        obj_pos = list(zip(map(lambda x: self.get_object(type, int(x), request.user.id), positions.keys()), positions.values()))
-        print(*obj_pos)
-        if not all(obj for obj, _ in obj_pos):
-            return Response(
-                {"res": "One of the ids is wrong"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if max(index for _, index in obj_pos) >= len(obj_pos):
-            return Response(
-                {"res": "One of the positions is higher than expected"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+    def validate(self, positions, user_id: int) -> dict[UserTaskList, int] | str:
+        if not positions:
+            return "No positions provided"
         
-        if min(index for _, index in obj_pos) < 0:
-            return Response(
-                {"res": "One of the positions is lower than expected"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        elif not isinstance(positions, dict):
+            return "Positions should be a dictionary"
         
-        obj_serializers = []
-        for obj, index in obj_pos:
-            data = {
-                'position': index, 
-            }
+        elif not all(str(k).isnumeric() for k in positions.keys()):
+            return "Some of the ids are invalid"
+        
+        elif not all(str(v).isnumeric() for v in positions.values()):
+            return "Some of the positions are invalid"
 
-            serializer = ItemPositionSerializer(instance=obj, data=data, partial=True)
-            if serializer.is_valid():
-                obj_serializers.append(serializer)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        elif max(positions.values()) >= len(positions):
+            return "Some of the positions are too high"
+        
+        elif min(positions.values()) < 0:
+            return "Some of the positions are negative"
+        
+        elif len(positions) != len(positions):
+            return "Some of the ids are duplicated"
+        
+        elif len(positions) != len(set(positions.values())):
+            return "Some of the positions are duplicated"
+        
+        obj_pos = dict(zip(map(lambda x: self.get_UserTaskList(int(x), user_id), positions.keys()), positions.values()))
+        
+        if not all(obj_pos.keys()):
+            return "Some of the ids are invalid"
 
-        for serializer in obj_serializers:
-            serializer.save() # toto nesavuje 
+        return obj_pos
 
-        return Response("success", status=status.HTTP_200_OK)
-    
+    def put(self, request, *args, **kwargs):
+
+        positions = self.validate(request.data, request.user.id)
+
+        if isinstance(positions, str):
+            return Response(positions, status=status.HTTP_400_BAD_REQUEST)
+        
+        instances = []
+        for obj, index in positions.items():
+            obj.position = index
+            obj.save()
+            instances.append(obj)
+
+        serializer = UsersTaskListsSerializer(instances, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
