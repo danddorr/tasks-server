@@ -123,6 +123,7 @@ class TaskListDetailApiView(APIView):
         data = {
             'tasklist': tasklist_instance.id,
             'task': request.data.get('task'),
+            'position': Task.objects.filter(tasklist=tasklist_instance).count(),
         }
 
         serializer = TaskSerializer(data=data)
@@ -254,7 +255,7 @@ class TaskApiView(APIView):
             status=status.HTTP_200_OK
         )
     
-class TaskListPositionsChange(APIView):
+class ItemPositionsChange(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsOwner]
         
@@ -265,7 +266,14 @@ class TaskListPositionsChange(APIView):
         except UserTaskList.DoesNotExist:
             return None
         
-    def validate(self, positions, user_id: int) -> dict[UserTaskList, int] | str:
+    def get_Task(self, task_id, user_id):
+        try:
+            task = Task.objects.get(id=task_id, tasklist__usertasklist__user_id=user_id)
+            return task
+        except Task.DoesNotExist:
+            return None
+        
+    def validate(self, itemType, positions, user_id: int) -> dict[UserTaskList|Task, int] | str:
         if not positions:
             return "No positions provided"
         
@@ -290,16 +298,19 @@ class TaskListPositionsChange(APIView):
         elif len(positions) != len(set(positions.values())):
             return "Some of the positions are duplicated"
         
-        obj_pos = dict(zip(map(lambda x: self.get_UserTaskList(int(x), user_id), positions.keys()), positions.values()))
+        if itemType == 'tasks':
+            obj_pos = dict(zip(map(lambda x: self.get_Task(int(x), user_id), positions.keys()), positions.values()))
+        else:
+            obj_pos = dict(zip(map(lambda x: self.get_UserTaskList(int(x), user_id), positions.keys()), positions.values()))
         
         if not all(obj_pos.keys()):
             return "Some of the ids are invalid"
 
         return obj_pos
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request, itemType, *args, **kwargs):
 
-        positions = self.validate(request.data, request.user.id)
+        positions = self.validate(itemType, request.data, request.user.id)
 
         if isinstance(positions, str):
             return Response(positions, status=status.HTTP_400_BAD_REQUEST)
@@ -309,6 +320,9 @@ class TaskListPositionsChange(APIView):
             obj.position = index
             obj.save()
             instances.append(obj)
-
-        serializer = UsersTaskListsSerializer(instances, many=True)
+            
+        if itemType == 'tasks':
+            serializer = TaskSerializer(instances, many=True)
+        else:
+            serializer = UsersTaskListsSerializer(instances, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

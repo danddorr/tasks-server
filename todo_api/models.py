@@ -16,6 +16,7 @@ class Task(models.Model):
     completed_at = models.DateTimeField(blank = True, null=True)
     last_updated_at = models.DateTimeField(auto_now = True, blank = True)
     task = models.CharField(max_length = 300)
+    position = models.IntegerField()
 
     def __str__(self):
         return self.task
