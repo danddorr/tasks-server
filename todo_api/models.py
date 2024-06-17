@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+import random, uuid
 
 class TaskList(models.Model):
     name = models.CharField(max_length = 50)
@@ -39,3 +40,19 @@ class UserTaskList(models.Model):
 
     def __str__(self):
         return self.user.username + " " + self.tasklist.name
+
+class ShareLink(models.Model):
+    tasklist = models.ForeignKey(TaskList, on_delete = models.CASCADE, blank = True, null = True)
+    link = models.CharField(max_length = 20, unique=True)
+    expiry_date = models.DateTimeField(blank = True, null = True)
+    role = models.CharField(max_length = 10, choices = UserTaskList.role_choices, default = UserTaskList.viewer)
+
+    @classmethod
+    def generate_unique_link(cls):
+        link = str(uuid.uuid4())[:20]
+        if cls.objects.filter(link = link).exists():
+            return cls.generate_unique_link()
+        return link
+
+    def __str__(self):
+        return self.link

@@ -6,4 +6,6 @@ urlpatterns = [
     path('tasklists/<int:tasklist_id>/', TaskListDetailApiView.as_view()),
     path('tasks/<int:task_id>/', TaskApiView.as_view()),
     re_path(r'positions/(?P<itemType>\btasks\b|\btasklists\b)/', ItemPositionsChange.as_view()),
+    path('tasklist/share/', ShareTaskList.as_view()),
+    path('tasklist/join/<str:link>/', JoinTaskList.as_view()),
 ]

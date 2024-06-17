@@ -320,9 +320,59 @@ class ItemPositionsChange(APIView):
             obj.position = index
             obj.save()
             instances.append(obj)
-            
+
         if itemType == 'tasks':
             serializer = TaskSerializer(instances, many=True)
         else:
             serializer = UsersTaskListsSerializer(instances, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class ShareTaskList(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, IsOwner]
+
+    def post(self, request, *args, **kwargs):
+        data = {
+            'tasklist': request.data.get('tasklist'),
+            'link': ShareLink.generate_unique_link(),
+            'expiry_date': timezone.now() + timezone.timedelta(days=7),
+            'role': request.data.get('role'),
+        }
+
+        serializer = ShareLinkSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class JoinTaskList(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, link, *args, **kwargs):
+        try:
+            share_link = ShareLink.objects.get(link=link, expiry_date__gte=timezone.now())
+        except ShareLink.DoesNotExist:
+            return Response(
+                {"res": "Link is invalid or expired"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if UserTaskList.objects.filter(user_id = request.user.id).exists():
+            return Response(
+                {"res": "User already has joined the tasklist"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        data = {
+            'user': request.user.id,
+            'tasklist': share_link.tasklist.id,
+            'role': share_link.role,
+            'position': UserTaskList.objects.filter(user_id=request.user.id).count(),
+        }
+
+        serializer = UsersTaskListsSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -26,6 +26,11 @@ class UsersTaskListsSerializer(serializers.ModelSerializer):
         model = UserTaskList
         fields = '__all__'
 
+class ShareLinkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShareLink
+        fields = '__all__'
+
 class UserCreateSerializer(BaseUserSerializer):
     class Meta(BaseUserSerializer.Meta):
         fields = ['id', 'email', 'username', 'password']
