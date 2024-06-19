@@ -332,6 +332,11 @@ class ShareTaskList(APIView):
     permission_classes = [IsAuthenticated, IsOwner]
 
     def post(self, request, *args, **kwargs):
+        if ShareLink.objects.filter(tasklist=request.data.get('tasklist')).exists():
+            share_link = ShareLink.objects.get(tasklist=request.data.get('tasklist'))
+            serializer = ShareLinkSerializer(share_link)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
         data = {
             'tasklist': request.data.get('tasklist'),
             'link': ShareLink.generate_unique_link(),
@@ -358,7 +363,7 @@ class JoinTaskList(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        if UserTaskList.objects.filter(user_id = request.user.id).exists():
+        if UserTaskList.objects.filter(user_id = request.user.id, tasklist_id = share_link.tasklist.id).exists():
             return Response(
                 {"res": "User already has joined the tasklist"}, 
                 status=status.HTTP_400_BAD_REQUEST
