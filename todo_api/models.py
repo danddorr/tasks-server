@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-import random, uuid
+import uuid
 
 class TaskList(models.Model):
     name = models.CharField(max_length = 50)
